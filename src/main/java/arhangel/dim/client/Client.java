@@ -23,11 +23,11 @@ import arhangel.dim.core.net.ProtocolException;
  * Клиент для тестирования серверного приложения
  */
 public class Client implements ConnectionHandler {
-
     /**
      * Механизм логирования позволяет более гибко управлять записью данных в лог (консоль, файл и тд)
      * */
     static Logger log = LoggerFactory.getLogger(Client.class);
+    private Long clientId;
 
     /**
      * Протокол, хост и порт инициализируются из конфига

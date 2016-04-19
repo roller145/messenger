@@ -63,4 +63,6 @@ public abstract class Message implements Serializable {
                 ", type=" + type +
                 '}';
     }
+
+
 }
