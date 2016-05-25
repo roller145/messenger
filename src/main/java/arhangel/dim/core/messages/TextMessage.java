@@ -1,5 +1,6 @@
 package arhangel.dim.core.messages;
 
+import java.sql.Date;
 import java.util.Objects;
 
 /**
@@ -7,6 +8,8 @@ import java.util.Objects;
  */
 public class TextMessage extends Message {
     private String text;
+    private Date date;
+    private Long chatId;
 
     public String getText() {
         return text;
@@ -41,5 +44,17 @@ public class TextMessage extends Message {
         return "TextMessage{" +
                 "text='" + text + '\'' +
                 '}';
+    }
+
+    public void setDate(Date date) {
+        this.date = date;
+    }
+
+    public void setChatId(Long chatId) {
+        this.chatId = chatId;
+    }
+
+    public Date getDate() {
+        return date;
     }
 }
