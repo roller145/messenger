@@ -12,6 +12,8 @@ import java.util.logging.Logger;
 import arhangel.dim.core.Chat;
 import arhangel.dim.core.messages.Message;
 import arhangel.dim.core.messages.TextMessage;
+import java.lang.String;
+import com.sun.xml.internal.ws.api.message.MessageWritable;
 
 import java.lang.String;
 
@@ -23,19 +25,19 @@ import com.sun.xml.internal.ws.api.message.MessageWritable;
 public class MessageStore {
 
     Connection connection = null;
-    private final String url = "jdbc:postgresql://178.62.140.149:5432/roller145";
+    private final String url = "jdbc:postgresql://178.62.140.149:5432/UPML";
     private final String name = "trackuser";
     private final String password = "trackuser";
     private final String getMessagesFromChatStatement =
             "SELECT * FROM chat_messages INNER JOIN messages_texts " +
-                    "ON chat_messages.message_id = messages_text.text_id " +
-                    "WHERE chat_messages.chat_id = ?;";
+            "ON chat_messages.message_id = messages_text.text_id " +
+            "WHERE chat_messages.chat_id = ?;";
     private final String getChatsByUserIdStatement =
             "SELECT * FROM users_chats WHERE user_id = ?;";
     private final String getMessagesByIdStatement =
             "SELECT * FROM chat_messages INNER JOIN messages_texts" +
-                    " ON chat_messages.message_id = messages_text.text_id " +
-                    " WHERE messages_text.text_id = ?;";
+            " ON chat_messages.message_id = messages_text.text_id " +
+            " WHERE messages_text.text_id = ?;";
     private final String setTextOfMessage =
             "INSERT INTO messages_text(text, text_date) VALUES(?, ?) RETURNING text_id";
     private final String setMessageChat =
