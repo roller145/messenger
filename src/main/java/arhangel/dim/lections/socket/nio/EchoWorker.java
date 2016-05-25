@@ -11,11 +11,11 @@ class EchoWorker implements Runnable {
     private final List<ServerDataEvent> queue = new LinkedList<>();
 
     void processData(NioServer server, SocketChannel socket, byte[] data, int count) {
-        byte[] dataCopy = new byte[count];
-        System.arraycopy(data, 0, dataCopy, 0, count);
+        byte[] dataCopy = new byte[count]; //создаём новый буфер, чтобы сюда больше не писали
+        System.arraycopy(data, 0, dataCopy, 0, count);//копируем в него данные, кладём в очередь
         synchronized (queue) {
             queue.add(new ServerDataEvent(server, socket, dataCopy));
-            queue.notify();
+            queue.notify();//оповестили всех, что в очередь добавилось
         }
     }
 
@@ -31,9 +31,9 @@ class EchoWorker implements Runnable {
                     }
                 }
                 System.out.println("Recieved = " + new String(queue.get(0).data));
-                dataEvent = queue.remove(0);
+                dataEvent = queue.remove(0); //ждём, что получили, а потом забираем event
             }
-            dataEvent.server.send(dataEvent.socket, dataEvent.data);
+            dataEvent.server.send(dataEvent.socket, dataEvent.data);//пересылаем серверу по новому созданному каналу данные
         }
     }
 }

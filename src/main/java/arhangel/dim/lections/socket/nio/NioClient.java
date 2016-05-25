@@ -23,12 +23,12 @@ public class NioClient {
     private ByteBuffer buffer = allocate(16);
 
     private void run() throws Exception {
-        SocketChannel channel = SocketChannel.open();
-        channel.configureBlocking(false);
-        Selector selector = Selector.open();
-        channel.register(selector, OP_CONNECT);
-        channel.connect(new InetSocketAddress(ADDRESS, PORT));
-        BlockingQueue<String> queue = new ArrayBlockingQueue<>(2);
+        SocketChannel channel = SocketChannel.open();//создаём канал для работы с сетью, ничего не открываем
+        channel.configureBlocking(false); //неблокирующий канал
+        Selector selector = Selector.open(); //создаём пустой канал
+        channel.register(selector, OP_CONNECT); //связываем канал с селектором, говорим,что будем ждать подключения
+        channel.connect(new InetSocketAddress(ADDRESS, PORT)); //подключаем канал с сетью, слушаем подключения
+        BlockingQueue<String> queue = new ArrayBlockingQueue<>(2); //создаём блокирующую очередь-помощник
         new Thread(() -> {
             Scanner scanner = new Scanner(System.in);
             while (true) {
@@ -41,22 +41,24 @@ public class NioClient {
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
-                SelectionKey key = channel.keyFor(selector);
+                SelectionKey key = channel.keyFor(selector);//канал, создай событие на селекторе
                 key.interestOps(OP_WRITE);
-                selector.wakeup();
+                selector.wakeup();//проснись
             }
-        }).start();
+        }).start(); //поток для считывания из консоли, по команде q - выходит из клиента топорным exit(),
+        // складывает таски для обработки в блокирующую очередь
         while (true) {
-            selector.select();
-            for (SelectionKey selectionKey : selector.selectedKeys()) {
-                if (selectionKey.isConnectable()) {
+            selector.select(); //мы блокируемся
+            for (SelectionKey selectionKey : selector.selectedKeys()) { //произошло событие
+                if (selectionKey.isConnectable()) { //подключение-> закончи процесс подключения, подключись на запись
                     channel.finishConnect();
                     selectionKey.interestOps(OP_WRITE);
-                } else if (selectionKey.isReadable()) {
+                } else if (selectionKey.isReadable()) {//прочесть-> чистим буфер, канал читает данные из буфера
                     buffer.clear();
                     channel.read(buffer);
                     System.out.println("Recieved = " + new String(buffer.array()));
-                } else if (selectionKey.isWritable()) {
+                } else if (selectionKey.isWritable()) {//записать->забираем из очереди, пишем в канал, если не пустая,
+                    // ставим на ожидание чтения
                     String line = queue.poll();
                     if (line != null) {
                         channel.write(ByteBuffer.wrap(line.getBytes()));
