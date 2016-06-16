@@ -30,7 +30,6 @@ class CommandLogin extends Command {
 
     @Override
     public void execute() throws ExecutionException, IOException, ProtocolException {
-        logger.info("login with username: " + login);
         if (isLogin() && isPassword()) {
             logger.info(String.format("Executing login request with parameters: [username=%s]", login));
             LoginMessage loginMessage = new LoginMessage(login, password);

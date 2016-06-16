@@ -1,5 +1,6 @@
 package arhangel.dim.client.commands;
 
+import arhangel.dim.core.messages.InfoMessage;
 import arhangel.dim.core.messages.LoginMessage;
 import arhangel.dim.core.net.ProtocolException;
 import com.beust.jcommander.Parameter;
@@ -23,11 +24,10 @@ class CommandInfo extends Command {
 
     @Override
     public void execute() throws ExecutionException, IOException, ProtocolException {
-        logger.info("login with username: " + login);
         if (isMe()) {
             logger.info("Executing info request about me:)");
-            InfoMessage loginMessage = new LoginMessage(login, password);
-            client.send(loginMessage);
+            InfoMessage infoMessage = new InfoMessage(id);
+            client.send(infoMessage);
         } else {
             logger.info("Wrong parameters of login request");
         }
