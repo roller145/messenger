@@ -37,6 +37,7 @@ public class Client implements ConnectionHandler {
     private int port;
     private String host;
 
+    private ClientUser user;
     /**
      * Тред "слушает" сокет на наличие входящих сообщений от сервера
      */
