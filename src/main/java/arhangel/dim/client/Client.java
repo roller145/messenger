@@ -48,6 +48,7 @@ public class Client implements ConnectionHandler {
      */
     private InputStream in;
     private OutputStream out;
+    private Long client;
 
     public Protocol getProtocol() {
         return protocol;
@@ -192,5 +193,13 @@ public class Client implements ConnectionHandler {
                 client.close();
             }
         }
+    }
+
+    public Long getClient() {
+        return client;
+    }
+
+    public ClientUser getUser() {
+        return user;
     }
 }

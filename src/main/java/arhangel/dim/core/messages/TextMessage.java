@@ -25,6 +25,7 @@ public class TextMessage extends Message {
         this.dateTime = dateTime;
     }
 
+
     public String getText() {
         return text;
     }
