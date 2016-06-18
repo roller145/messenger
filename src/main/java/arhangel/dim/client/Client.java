@@ -4,17 +4,18 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
+import java.time.LocalDateTime;
 import java.util.Arrays;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Scanner;
 
+import arhangel.dim.core.messages.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import arhangel.dim.container.Container;
 import arhangel.dim.container.InvalidConfigurationException;
-import arhangel.dim.core.messages.Message;
-import arhangel.dim.core.messages.TextMessage;
-import arhangel.dim.core.messages.Type;
 import arhangel.dim.core.net.ConnectionHandler;
 import arhangel.dim.core.net.Protocol;
 import arhangel.dim.core.net.ProtocolException;
@@ -47,6 +48,8 @@ public class Client implements ConnectionHandler {
      * С каждым сокетом связано 2 канала in/out
      */
     private InputStream in;
+    private boolean closed = false;
+
     private OutputStream out;
     private Long client;
 
@@ -111,7 +114,13 @@ public class Client implements ConnectionHandler {
      */
     @Override
     public void onMessage(Message msg) {
-        log.info("Message received: {}", msg);
+        log.info("Message received: {" + msg.toString() + "}");
+        try {
+            throw new CommandException("mew");
+            //сделать из сообщения команду
+        } catch (CommandException ex) {
+            ex.printStackTrace();
+        }
     }
 
     /**
@@ -124,20 +133,88 @@ public class Client implements ConnectionHandler {
         String cmdType = tokens[0];
         switch (cmdType) {
             case "/login":
-                // TODO: реализация
+                if (tokens.length < 3) {
+                    log.error("Wrong parameters of login request");
+                } else {
+                    log.info(String.format("Executing login request with parameter: [username=%s]", tokens[1]));
+                    LoginMessage loginMessage = new LoginMessage(tokens[1], tokens[2]);
+                    send(loginMessage);
+                }
                 break;
             case "/help":
-                // TODO: реализация
+                System.out.println("login: /login <login> <password>");
+                System.out.println("help: /help");
+                System.out.println("get info about user: /info <id>");
+                System.out.println("get list of your chats: /chat_list");
+                System.out.println("create new chat with users with specified id list: /chat_create <id1> <id2> ...");
+                System.out.println("a list of messages from the specified chat: /chat_history <chat_id>");
+                System.out.println("send a message to the specified chat, chat must be in the list of user chats: /text <id> <message>");
                 break;
             case "/text":
-                // FIXME: пример реализации для простого текстового сообщения
-                TextMessage sendMessage = new TextMessage();
-                sendMessage.setType(Type.MSG_TEXT);
-                sendMessage.setText(tokens[1]);
-                send(sendMessage);
+                if (tokens.length < 2) {
+                    log.error("Wrong parameters of sending text message request");
+                } else if (!user.isLoginned()) {
+                    log.error("You are not loginned");
+                } else {
+                    StringBuilder str = new StringBuilder();
+                    for (int i = 2; i < tokens.length; ++i) {
+                        str.append(tokens[i]);
+                    }
+                    log.info("Sending message with text" + str.toString());
+                    TextMessage infoMessage = new TextMessage(Long.parseLong(tokens[1]), user.getId(), str.toString(), LocalDateTime.now());
+                    send(infoMessage);
+                }
                 break;
-            // TODO: implement another types from wiki
-
+            case "/info":
+                if (tokens.length < 2) {
+                    if (!user.isLoginned()) {
+                        log.error("You are not loginned");
+                    } else {
+                        log.info("Executing info request about me:)");
+                        InfoMessage infoMessage = new InfoMessage(user.getId());
+                        send(infoMessage);
+                    }
+                } else {
+                    log.info("Executing info request with parameter: [id=%d]", Long.parseLong(tokens[1]));
+                    InfoMessage infoMessage = new InfoMessage(Long.parseLong(tokens[1]));
+                    send(infoMessage);
+                }
+                break;
+            case "/chat_list":
+                if (!user.isLoginned()) {
+                    log.error("You are not loginned");
+                } else {
+                    log.info("Executing info request about my chats:)");
+                    ChatListMessage infoMessage = new ChatListMessage(user.getId());
+                    send(infoMessage);
+                }
+                break;
+            case "/chat_history":
+                if (tokens.length < 2) {
+                    log.error("Wrong parameters of chat history request");
+                } else if (!user.isLoginned()) {
+                    log.error("You are not loginned");
+                } else {
+                    log.info("Executing info request about chat:" + tokens[2]);
+                    ChatHistoryMessage infoMessage = new ChatHistoryMessage(user.getId());
+                    send(infoMessage);
+                }
+                break;
+            case "/chat_create":
+                if (tokens.length < 2) {
+                    log.error("Wrong parameters of chat create request");
+                } else if (!user.isLoginned()) {
+                    log.error("You are not loginned");
+                } else {
+                    List<Long> userIds = new LinkedList<>();
+                    for (int i = 1; i < tokens.length; ++i) {
+                        userIds.add(Long.parseLong(tokens[1]));
+                    }
+                    log.info("Creating new chat");
+                    ChatCreateMessage loginMessage = new ChatCreateMessage(userIds);
+                    send(loginMessage);
+                }
+                break;
             default:
                 log.error("Invalid input: " + line);
         }
@@ -149,13 +226,24 @@ public class Client implements ConnectionHandler {
     @Override
     public void send(Message msg) throws IOException, ProtocolException {
         log.info(msg.toString());
-        out.write(protocol.encode(msg));
+        if (!closed) {
+            out.write(protocol.encode(msg));
+        }
         out.flush(); // принудительно проталкиваем буфер с данными
     }
 
     @Override
     public void close() {
-        // TODO: написать реализацию. Закройте ресурсы и остановите поток-слушатель
+        socketThread.interrupt();
+        if (!closed) {
+            closed = true;
+            try {
+                in.close();
+                out.close();
+            } catch (IOException e) {
+                log.error(e.getMessage());
+            }
+        }
     }
 
     public static void main(String[] args) throws Exception {
@@ -171,11 +259,10 @@ public class Client implements ConnectionHandler {
         }
         try {
             client.initSocket();
-
             // Цикл чтения с консоли
             Scanner scanner = new Scanner(System.in);
             System.out.println("$");
-            while (true) {
+            while (Thread.currentThread().isInterrupted()) {
                 String input = scanner.nextLine();
                 if ("q".equals(input)) {
                     return;
@@ -195,11 +282,4 @@ public class Client implements ConnectionHandler {
         }
     }
 
-    public Long getClient() {
-        return client;
-    }
-
-    public ClientUser getUser() {
-        return user;
-    }
 }
