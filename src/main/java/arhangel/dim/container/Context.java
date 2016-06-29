@@ -42,7 +42,6 @@ public class Context {
     Map<String, Object> objectsByClass = new HashMap<>();
 
     public static void main(String[] args) throws Exception {
-
         // Dynamic config
         Context context = new Context("config.xml");
         Car car = (Car) context.getBeanByName("carBean");

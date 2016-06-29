@@ -55,4 +55,5 @@ public class LoginMessage extends Message {
     public void setPassword(String password) {
         this.password = password;
     }
+
 }

@@ -1,6 +1,10 @@
-package arhangel.dim.core.messages;
+package arhangel.dim.core.commands;
 
+import arhangel.dim.core.messages.Message;
+import arhangel.dim.core.net.ProtocolException;
 import arhangel.dim.core.net.Session;
+
+import java.io.IOException;
 
 // TODO: на каждое сообщение завести обработчик-команду
 public interface Command {
@@ -13,5 +17,5 @@ public interface Command {
      * @param message - сообщение для обработки
      * @throws CommandException - все исключения перебрасываются как CommandException
      */
-    void execute(Session session, Message message) throws CommandException;
+    void execute(Session session, Message message) throws CommandException, ProtocolException, IOException;
 }

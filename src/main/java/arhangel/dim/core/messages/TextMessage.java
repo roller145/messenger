@@ -1,5 +1,7 @@
 package arhangel.dim.core.messages;
 
+import com.sun.jndi.toolkit.ctx.Continuation;
+
 import java.time.LocalDateTime;
 import java.util.Objects;
 
@@ -10,7 +12,7 @@ public class TextMessage extends Message {
     private String text;
     private LocalDateTime dateTime;
     private Long chatId;
-    private Long userId;
+    private Continuation date;
 
     public TextMessage() {
         super();
@@ -19,8 +21,8 @@ public class TextMessage extends Message {
 
     public TextMessage(Long chatId, Long userId, String text, LocalDateTime dateTime) {
         this();
+        this.setSenderId(userId);
         this.chatId = chatId;
-        this.userId = userId;
         this.text = text;
         this.dateTime = dateTime;
     }
@@ -57,7 +59,7 @@ public class TextMessage extends Message {
     @Override
     public String toString() {
         return "TextMessage{" +
-                "text='" + text + '\'' +
+                "text= " + text +
                 '}';
     }
 
@@ -68,4 +70,5 @@ public class TextMessage extends Message {
     public LocalDateTime getDateTime() {
         return dateTime;
     }
+
 }

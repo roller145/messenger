@@ -26,7 +26,7 @@ public interface MessageStore {
     /**
      * Список сообщений из чата
      */
-    List<Long> getMessagesFromChat(Long chatId) throws StorageException;
+    List<TextMessage> getMessagesFromChat(Long chatId) throws StorageException;
 
     /**
      * Получить информацию о сообщении
@@ -36,7 +36,7 @@ public interface MessageStore {
     /**
      * Добавить сообщение в чат
      */
-    Message addMessage(Long chatId, Message message) throws StorageException;
+    Long addMessage(Long chatId, TextMessage message) throws StorageException;
 
     /**
      * Добавить пользователя к чату
@@ -44,4 +44,5 @@ public interface MessageStore {
     void addUserToChat(Long userId, Long chatId) throws StorageException;
 
 
+    Long addChat(List<Long> users) throws StorageException;
 }

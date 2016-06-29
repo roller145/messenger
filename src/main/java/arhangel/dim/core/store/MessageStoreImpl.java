@@ -48,9 +48,9 @@ public class MessageStoreImpl implements MessageStore {
     }
 
     @Override
-    public List<Long> getMessagesFromChat(Long chatId) throws StorageException {
+    public List<TextMessage> getMessagesFromChat(Long chatId) throws StorageException {
         try {
-            List<Long> resultList = askingDB.getMessagesFromChat(chatId);
+            List<TextMessage> resultList = askingDB.getMessagesFromChat(chatId);
             return resultList;
         } catch (SQLException ex) {
             throw new StorageException(ex);
@@ -79,10 +79,10 @@ public class MessageStoreImpl implements MessageStore {
     }
 
     @Override
-    public Message addMessage(Long chatId, Message message) throws StorageException {
-        TextMessage mess;
+    public Long addMessage(Long chatId, TextMessage message) throws StorageException {
+        Long mess;
         try {
-            mess = askingDB.addMessage(chatId, (TextMessage) message);
+            mess = askingDB.addMessage(chatId, message);
         } catch (SQLException ex) {
             throw new StorageException(ex);
         } catch (ClassNotFoundException ex) {
@@ -101,6 +101,22 @@ public class MessageStoreImpl implements MessageStore {
         } catch (ClassNotFoundException ex) {
             ex.printStackTrace();
         }
+    }
+
+    @Override
+    public Long addChat(List<Long> users) throws StorageException {
+        Long chatId = null;
+        try {
+            chatId = askingDB.createChat(users.get(0));
+        } catch (SQLException e) {
+            throw new StorageException(e);
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+        for (int it = 0; it < users.size();++it){
+            this.addUserToChat(users.get(it),chatId);
+        }
+        return chatId;
     }
 
 }

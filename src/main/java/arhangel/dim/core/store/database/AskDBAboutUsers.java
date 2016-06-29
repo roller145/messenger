@@ -40,7 +40,7 @@ public class AskDBAboutUsers {
         Map<Integer, Object> prepared = new HashMap<>();
         prepared.put(1, username);
         prepared.put(2, password);
-        Long id = exec.execUpdate("INSERT INTO users(username, password) values(?, ?) RETURNING id;", prepared);
+        Long id =exec.execUpdate("INSERT INTO users(username, password) values(?, ?);", prepared);
         return id;
     }
 
@@ -55,7 +55,7 @@ public class AskDBAboutUsers {
                 Long id = resultSet.getLong("id");
                 return new User(id, login, pass);
             } else {
-                throw new SQLException("No such user");
+                return null;
             }
         });
         return res;
@@ -72,7 +72,7 @@ public class AskDBAboutUsers {
                 User user = new User(id, username, password);
                 return user;
             } else {
-                throw new SQLException("No such user");
+                return null;
             }
         });
         return res;

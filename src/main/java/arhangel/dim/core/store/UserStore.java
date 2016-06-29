@@ -16,8 +16,6 @@ public interface UserStore {
      */
     User addUser(User user) throws SQLException, StorageException;
 
-    User getUserById(Long id, String pass);
-
     /**
      * Обновить информацию о пользователе
      */

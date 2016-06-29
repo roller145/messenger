@@ -14,14 +14,10 @@ public class UserStoreImpl implements UserStore {
 
     Map<Long, User> users = null;
     Map<String, User> nameCash = null;
-    Connection connection = null;
     AskDBAboutUsers askingDB = null;
 
-    private final String updateStatement = "UPDATE users SET username = ? AND  password = ? WHERE id = ?";
 
-
-    UserStoreImpl(Connection connection) throws StorageException {
-        this.connection = connection;
+    public UserStoreImpl() throws StorageException {
         askingDB = new AskDBAboutUsers();
         users = new HashMap<>();
         nameCash = new HashMap<>();
@@ -41,6 +37,10 @@ public class UserStoreImpl implements UserStore {
     public User addUser(User user) throws SQLException, StorageException {
         User res = null;
         try {
+            if (nameCash.containsKey(user.getName())){
+                return null;
+            }
+
             Long id = askingDB.addUser(user.getName(), user.getPassword());
             res = new User(id, user.getName(), user.getPassword());
             users.put(id, res);
@@ -53,8 +53,24 @@ public class UserStoreImpl implements UserStore {
     }
 
     @Override
-    public User getUserById(Long id, String pass) {
-        return null;
+    public User getUserById(Long id) throws StorageException {
+        User res = null;
+        if (users.containsKey(id)) {
+            return users.get(id);
+        } else {
+            try {
+                res = askingDB.getUser(id);
+                if (res != null) {
+                    users.put(res.getId(), res);
+                    nameCash.put(res.getName(), res);
+                }
+            } catch (SQLException ex) {
+                throw new StorageException(ex);
+            } catch (ClassNotFoundException | StorageException ex) {
+                ex.printStackTrace();
+            }
+        }
+        return res;
     }
 
 
@@ -70,9 +86,10 @@ public class UserStoreImpl implements UserStore {
         } else {
             try {
                 res = askingDB.getUser(login, pass);
-                users.put(res.getId(), res);
-                nameCash.put(res.getName(), res);
-
+                if (res != null) {
+                    users.put(res.getId(), res);
+                    nameCash.put(res.getName(), res);
+                }
             } catch (SQLException ex) {
                 throw new StorageException(ex);
             } catch (ClassNotFoundException ex) {
@@ -82,25 +99,6 @@ public class UserStoreImpl implements UserStore {
         return res;
     }
 
-    @Override
-    public User getUserById(Long id) throws StorageException {
-        User res = null;
-        if (users.containsKey(id)) {
-            return users.get(id);
-        } else {
-            try {
-                res = askingDB.getUser(id);
-                users.put(res.getId(), res);
-                nameCash.put(res.getName(), res);
-
-            } catch (SQLException ex) {
-                throw new StorageException(ex);
-            } catch (ClassNotFoundException ex) {
-                ex.printStackTrace();
-            }
-        }
-        return res;
-    }
 
     /**
      * Получить пользователя по id, например запрос информации/профиля

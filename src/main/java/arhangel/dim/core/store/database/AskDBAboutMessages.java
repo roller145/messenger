@@ -25,7 +25,7 @@ public class AskDBAboutMessages {
         QueryExecutor exec = new QueryExecutor();
         Map<Integer, Object> prepared = new HashMap<>();
         prepared.put(1, userId);
-        List<Long> result = exec.execQuery("SELECT chat_id FROM users_chats WHERE user_id = ?;", prepared, resultSet -> {
+        List<Long> result = exec.execQuery("SELECT chat_id FROM user_chats WHERE user_id = ?;", prepared, resultSet -> {
             List<Long> resultList = new LinkedList<>();
             try {
                 while (resultSet.next()) {
@@ -40,18 +40,22 @@ public class AskDBAboutMessages {
         return result;
     }
 
-    public List<Long> getMessagesFromChat(Long chatId) throws SQLException, StorageException, ClassNotFoundException {
+    public List<TextMessage> getMessagesFromChat(Long chatId) throws SQLException, StorageException, ClassNotFoundException {
         QueryExecutor exec = new QueryExecutor();
         String getMessagesFromChatStatement =
-                "SELECT text_id FROM chat_messages where chat_id = ?";
+                "SELECT * FROM chat_messages where chat_id = ?;";
         Map<Integer, Object> prepared = new HashMap<>();
         prepared.put(1, chatId);
-        List<Long> result = exec.execQuery(getMessagesFromChatStatement, prepared, resultSet -> {
-            List<Long> resultList = new LinkedList<>();
+        List<TextMessage> result = exec.execQuery(getMessagesFromChatStatement, prepared, resultSet -> {
+            List<TextMessage> resultList = new LinkedList<>();
             try {
                 while (resultSet.next()) {
-                    Long id = resultSet.getLong("text_id");
-                    resultList.add(id);
+                    Long id = resultSet.getLong("message_id");
+                    LocalDateTime date = resultSet.getTimestamp("text_date").toLocalDateTime();
+                    String text = resultSet.getString("text");
+                    Long userId = resultSet.getLong("user_id");
+                    TextMessage message = new TextMessage(chatId, userId, text, date);
+                    resultList.add(message);
                 }
                 return resultList;
             } catch (SQLException ex) {
@@ -61,36 +65,27 @@ public class AskDBAboutMessages {
         return result;
     }
 
-    public TextMessage addMessage(Long chatId, TextMessage message) throws SQLException, ClassNotFoundException {
+    public Long addMessage(Long chatId, TextMessage message) throws SQLException, ClassNotFoundException {
         String setTextOfMessage =
-                "INSERT INTO messages_text(text, text_date, sender_id) VALUES(?, ?, ?) RETURNING text_id";
+                "INSERT INTO chat_messages(text, text_date, user_id, chat_id) VALUES(?, ?, ?, ?);";
         Map<Integer, Object> prepared1 = new HashMap<>();
         prepared1.put(1, message.getText());
         Timestamp dateTime = Timestamp.valueOf(message.getDateTime());
         prepared1.put(2, dateTime);
         Long senderId = message.getSenderId();
         prepared1.put(3, senderId);
+        prepared1.put(4, chatId);
         QueryExecutor exec = new QueryExecutor();
         Long textId = exec.execUpdate(setTextOfMessage, prepared1);
 
-        String setMessageChat =
-                "INSERT INTO chat_messages(chat_id, message_id) VALUES(?, ?)";
-
-        Map<Integer, Object> prepared2 = new HashMap<>();
-        prepared2.put(1, chatId);
-        prepared2.put(2, textId);
-        QueryExecutor exec1 = new QueryExecutor();
-        exec1.execUpdate(setMessageChat, prepared2);
-        return new TextMessage(chatId, senderId, message.getText(), dateTime.toLocalDateTime());
+        return textId;
     }
 
     public Message getMessageById(Long messageId) throws SQLException, StorageException, ClassNotFoundException {
         Map<Integer, Object> prepared = new HashMap<>();
         prepared.put(1, messageId);
         String getMessagesByIdStatement =
-                "SELECT * FROM chat_messages INNER JOIN messages_texts" +
-                        " ON chat_messages.message_id = messages_text.text_id " +
-                        " WHERE messages_text.text_id = ?;";
+                "SELECT * FROM chat_messages WHERE message_id = ?;";
         QueryExecutor exec = new QueryExecutor();
         Message res = exec.execQuery(getMessagesByIdStatement, prepared, resultSet -> {
             LocalDateTime date = resultSet.getTimestamp("text_date").toLocalDateTime();
@@ -107,7 +102,7 @@ public class AskDBAboutMessages {
         QueryExecutor exec = new QueryExecutor();
         Map<Integer, Object> prepared = new HashMap<>();
         prepared.put(1, chatId);
-        List<Long> result = exec.execQuery("SELECT user_id FROM users_chats WHERE chat_id = ?;", prepared, resultSet -> {
+        List<Long> result = exec.execQuery("SELECT user_id FROM user_chats WHERE chat_id = ?;", prepared, resultSet -> {
             List<Long> resultList = new LinkedList<>();
             try {
                 while (resultSet.next()) {
@@ -123,11 +118,21 @@ public class AskDBAboutMessages {
     }
 
     public void addUserToChat(Long userId, Long chatId) throws SQLException, ClassNotFoundException {
-        final String addUserStatement = "INSERT INTO users_chats (chat_id, user_id) VALUES (?,?);";
+        final String addUserStatement = "INSERT INTO user_chats (chat_id, user_id) VALUES (?,?);";
         Map<Integer, Object> prepared = new HashMap<>();
         prepared.put(1, chatId);
         prepared.put(2, userId);
         QueryExecutor exec = new QueryExecutor();
         exec.execUpdate(addUserStatement, prepared);
+    }
+
+
+    public Long createChat(Long id) throws SQLException, ClassNotFoundException {
+        final String addUserStatement = "INSERT INTO chats(creator) VALUES(?);";
+        Map<Integer, Object> prepared = new HashMap<>();
+        prepared.put(1, id);
+        QueryExecutor exec = new QueryExecutor();
+        Long chatId = exec.execUpdate(addUserStatement, prepared);
+        return chatId;
     }
 }

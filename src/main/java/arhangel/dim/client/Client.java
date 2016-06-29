@@ -10,7 +10,9 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Scanner;
 
+import arhangel.dim.core.commands.CommandException;
 import arhangel.dim.core.messages.*;
+import arhangel.dim.core.net.BinaryProtocol;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,11 +36,11 @@ public class Client implements ConnectionHandler {
      * Протокол, хост и порт инициализируются из конфига
      *
      * */
-    private Protocol protocol;
-    private int port;
-    private String host;
+    private Protocol protocol = new BinaryProtocol();
+    private int port = 19000 ;
+    private String host = "localhost";
 
-    private ClientUser user;
+    private ClientUser user = new ClientUser();
     /**
      * Тред "слушает" сокет на наличие входящих сообщений от сервера
      */
@@ -51,7 +53,6 @@ public class Client implements ConnectionHandler {
     private boolean closed = false;
 
     private OutputStream out;
-    private Long client;
 
     public Protocol getProtocol() {
         return protocol;
@@ -76,7 +77,7 @@ public class Client implements ConnectionHandler {
     public void setHost(String host) {
         this.host = host;
     }
-
+;
     public void initSocket() throws IOException {
         Socket socket = new Socket(host, port);
         in = socket.getInputStream();
@@ -115,11 +116,22 @@ public class Client implements ConnectionHandler {
     @Override
     public void onMessage(Message msg) {
         log.info("Message received: {" + msg.toString() + "}");
-        try {
-            throw new CommandException("mew");
-            //сделать из сообщения команду
-        } catch (CommandException ex) {
-            ex.printStackTrace();
+        if (msg.getType() == Type.MSG_USER_CREATE_RESULT) {
+            UserCreateAnswerMessage status = (UserCreateAnswerMessage) msg;
+            if (status.getUsername() != null) {
+                user.login(status.getId(), status.getUsername());
+                log.info("Successfully logged in with id = " + user.getId());
+            } else {
+                log.info(status.getText());
+            }
+        } else if (msg.getType() == Type.MSG_LOGIN_RESULT){
+            LoginAnswerMessage status = (LoginAnswerMessage) msg;
+            if (status.getUsername() != null) {
+                user.login(status.getId(), status.getUsername());
+                log.info("Successfully logged in with id = " + user.getId());
+            } else {
+                log.info(status.getText());
+            }
         }
     }
 
@@ -151,18 +163,20 @@ public class Client implements ConnectionHandler {
                 System.out.println("send a message to the specified chat, chat must be in the list of user chats: /text <id> <message>");
                 break;
             case "/text":
-                if (tokens.length < 2) {
+                if (tokens.length < 3) {
                     log.error("Wrong parameters of sending text message request");
                 } else if (!user.isLoginned()) {
                     log.error("You are not loginned");
                 } else {
                     StringBuilder str = new StringBuilder();
-                    for (int i = 2; i < tokens.length; ++i) {
+                    str.append(tokens[2]);
+                    for (int i = 3; i < tokens.length; ++i) {
+                        str.append(" ");
                         str.append(tokens[i]);
                     }
-                    log.info("Sending message with text" + str.toString());
-                    TextMessage infoMessage = new TextMessage(Long.parseLong(tokens[1]), user.getId(), str.toString(), LocalDateTime.now());
-                    send(infoMessage);
+                    log.info("Sending message with text: " + str.toString());
+                    TextMessage textMessage = new TextMessage(Long.parseLong(tokens[1]), user.getId(), str.toString(), LocalDateTime.now());
+                    send(textMessage);
                 }
                 break;
             case "/info":
@@ -172,11 +186,13 @@ public class Client implements ConnectionHandler {
                     } else {
                         log.info("Executing info request about me:)");
                         InfoMessage infoMessage = new InfoMessage(user.getId());
+                        infoMessage.setSenderId(user.getId());
                         send(infoMessage);
                     }
                 } else {
-                    log.info("Executing info request with parameter: [id=%d]", Long.parseLong(tokens[1]));
+                    log.info("Executing info request with parameter: [id="+ Long.parseLong(tokens[1])+"]");
                     InfoMessage infoMessage = new InfoMessage(Long.parseLong(tokens[1]));
+                    infoMessage.setSenderId(user.getId());
                     send(infoMessage);
                 }
                 break;
@@ -185,8 +201,9 @@ public class Client implements ConnectionHandler {
                     log.error("You are not loginned");
                 } else {
                     log.info("Executing info request about my chats:)");
-                    ChatListMessage infoMessage = new ChatListMessage(user.getId());
-                    send(infoMessage);
+                    ChatListMessage chatListMessage = new ChatListMessage(user.getId());
+                    chatListMessage.setSenderId(user.getId());
+                    send(chatListMessage);
                 }
                 break;
             case "/chat_history":
@@ -195,9 +212,10 @@ public class Client implements ConnectionHandler {
                 } else if (!user.isLoginned()) {
                     log.error("You are not loginned");
                 } else {
-                    log.info("Executing info request about chat:" + tokens[2]);
-                    ChatHistoryMessage infoMessage = new ChatHistoryMessage(user.getId());
-                    send(infoMessage);
+                    log.info("Executing info request about chat:" + tokens[1]);
+                    ChatHistoryMessage  chatHistoryMessage = new ChatHistoryMessage(Long.parseLong(tokens[1]));
+                    chatHistoryMessage.setSenderId(user.getId());
+                    send(chatHistoryMessage);
                 }
                 break;
             case "/chat_create":
@@ -208,12 +226,23 @@ public class Client implements ConnectionHandler {
                 } else {
                     List<Long> userIds = new LinkedList<>();
                     for (int i = 1; i < tokens.length; ++i) {
-                        userIds.add(Long.parseLong(tokens[1]));
+                        userIds.add(Long.parseLong(tokens[i]));
                     }
                     log.info("Creating new chat");
-                    ChatCreateMessage loginMessage = new ChatCreateMessage(userIds);
-                    send(loginMessage);
+                    ChatCreateMessage chatCreateMessage = new ChatCreateMessage(userIds);
+                    chatCreateMessage.setSenderId(user.getId());
+                    send(chatCreateMessage);
                 }
+                break;
+            case "/user_create":
+                if (tokens.length < 3) {
+                    log.error("Not enough arguments");
+                }
+                String username = tokens[1];
+                String password = tokens[2];
+                UserCreateMessage userCreateMessage = new UserCreateMessage(username, password);
+                userCreateMessage.setType(Type.MSG_USER_CREATE);
+                send(userCreateMessage);
                 break;
             default:
                 log.error("Invalid input: " + line);
@@ -248,21 +277,14 @@ public class Client implements ConnectionHandler {
 
     public static void main(String[] args) throws Exception {
 
-        Client client = null;
-        // Пользуемся механизмом контейнера
-        try {
-            Container context = new Container("client.xml");
-            client = (Client) context.getByName("client");
-        } catch (InvalidConfigurationException e) {
-            log.error("Failed to create client", e);
-            return;
-        }
+        Client client = new Client();
+
         try {
             client.initSocket();
             // Цикл чтения с консоли
             Scanner scanner = new Scanner(System.in);
             System.out.println("$");
-            while (Thread.currentThread().isInterrupted()) {
+            while (!Thread.currentThread().isInterrupted()) {
                 String input = scanner.nextLine();
                 if ("q".equals(input)) {
                     return;
