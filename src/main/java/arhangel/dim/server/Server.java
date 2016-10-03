@@ -32,7 +32,7 @@ public class Server {
     private Protocol protocol = new BinaryProtocol();
     private int maxConnection = DEFAULT_MAX_CONNECT;
     private boolean isFinished = false;
-    private ExecutorService threadPool = Executors.newFixedThreadPool(10);
+    private ExecutorService threadPool = Executors.newFixedThreadPool(8);
     private static ServerSocket serverSocket;
 
 
